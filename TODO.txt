@@ -1,0 +1,9 @@
+TODO list for ajax_ui branch - weekcalendar:
+
+ * cleanup in weekcal.js - lots of copy-and-paste programming there, and handling of dates is awful
+ * mouseover preview of an event (?)
+ * make variable naming in weekcal.js consistent (event vs occurrence)
+
+A big question mark:
+
+ * support for multi-day events (???)

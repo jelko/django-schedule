@@ -87,7 +87,7 @@ url(r'^occurrence/cancel/(?P<event_id>\d+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>
 url(r'^occurrence/edit/(?P<event_id>\d+)/(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)/(?P<hour>\d+)/(?P<minute>\d+)/(?P<second>\d+)/$',
     'schedule.views.edit_occurrence', 
     name="edit_occurrence_by_date"),
-    
+
 
 #feed urls 
 url(r'^feed/calendar/(.*)/$',
@@ -95,6 +95,26 @@ url(r'^feed/calendar/(.*)/$',
     { "feed_dict": { "upcoming": UpcomingEventsFeed } }),
  
 (r'^ical/calendar/(.*)/$', CalendarICalendar()),
+
+# AJAX API
+
+#url for occurrences by encoded data
+url(r'^ajax/occurrence/edit_by_code/$',
+    'schedule.views.ajax_edit_occurrence_by_code',
+    name="ajax_edit_occurrence_by_code"),
+
+url(r'^ajax/calendar/week/json/(?P<calendar_slug>[-\w]+)/$',
+    'schedule.views.calendar_by_periods_json',
+    name = "week_calendar_json",
+    kwargs={'periods': [Week]}),
+
+url(r'^ajax/edit_event/(?P<calendar_slug>[-\w]+)/$',
+    'schedule.views.ajax_edit_event',
+    name = "ajax_edit_event"),
+
+url(r'^event_json/$',
+    'schedule.views.event_json',
+    name="event_json"),
 
  url(r'$', object_list, info_dict, name='schedule'), 
 )

@@ -32,3 +32,27 @@ class OccurrenceForm(SpanForm):
     class Meta:
         model = Occurrence
         exclude = ('original_start', 'original_end', 'event', 'cancelled')
+
+
+class OccurrenceBackendForm(SpanForm):
+    """
+        used only for processing data (for ajax methods)
+    """
+
+    start = forms.DateTimeField()
+    end = forms.DateTimeField()
+
+    class Meta:
+        model = Occurrence
+        exclude = ('original_start', 'original_end', 'event', 'cancelled')
+
+
+class EventBackendForm(SpanForm):
+
+    start = forms.DateTimeField()
+    end = forms.DateTimeField()
+    end_recurring_period = forms.DateTimeField(required=False)
+
+    class Meta:
+        model = Event
+        exclude = ('creator', 'created_on', 'calendar')
