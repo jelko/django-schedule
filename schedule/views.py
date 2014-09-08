@@ -1,7 +1,6 @@
 from schedule.utils import serialize_occurrences
 from urllib import quote
 from django.shortcuts import render_to_response, get_object_or_404
-from django.views.generic.create_update import delete_object
 from django.http import HttpResponseRedirect, Http404, HttpResponse
 from django.template import RequestContext
 from django.template import Context, loader
@@ -9,7 +8,6 @@ from django.core import serializers
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
-from django.views.generic.create_update import delete_object
 import datetime
 
 from schedule.conf.settings import GET_EVENTS_FUNC, OCCURRENCE_CANCEL_REDIRECT
@@ -140,46 +138,6 @@ def occurrence(request, event_id,
         'back_url': back_url,
     }, context_instance=RequestContext(request))
 
-
-@check_event_permissions
-def edit_occurrence(request, event_id,
-    template_name="schedule/edit_occurrence.html", *args, **kwargs):
-    event, occurrence = get_occurrence(event_id, *args, **kwargs)
-    next = kwargs.get('next', None)
-    form = OccurrenceForm(data=request.POST or None, instance=occurrence)
-    if form.is_valid():
-        occurrence = form.save(commit=False)
-        occurrence.event = event
-        occurrence.save()
-        next = next or get_next_url(request, occurrence.get_absolute_url())
-        return HttpResponseRedirect(next)
-    next = next or get_next_url(request, occurrence.get_absolute_url())
-    return render_to_response(template_name, {
-        'form': form,
-        'occurrence': occurrence,
-        'next':next,
-    }, context_instance=RequestContext(request))
-
-
-@check_event_permissions
-def cancel_occurrence(request, event_id,
-    template_name='schedule/cancel_occurrence.html', *args, **kwargs):
-    """
-    This view is used to cancel an occurrence. If it is called with a POST it
-    will cancel the view. If it is called with a GET it will ask for
-    conformation to cancel.
-    """
-    event, occurrence = get_occurrence(event_id, *args, **kwargs)
-    next = kwargs.get('next',None) or get_next_url(request, event.get_absolute_url())
-    if request.method != "POST":
-        return render_to_response(template_name, {
-            "occurrence": occurrence,
-            "next":next,
-        }, context_instance=RequestContext(request))
-    occurrence.cancel()
-    return HttpResponseRedirect(next)
-
-
 def get_occurrence(event_id, occurrence_id=None, year=None, month=None,
     day=None, hour=None, minute=None, second=None):
     """
@@ -202,104 +160,6 @@ def get_occurrence(event_id, occurrence_id=None, year=None, month=None,
     else:
         raise Http404
     return event, occurrence
-
-
-@check_event_permissions
-def create_or_edit_event(request, calendar_slug, event_id=None, next=None,
-    template_name='schedule/create_event.html', form_class = EventForm):
-    """
-    This function, if it receives a GET request or if given an invalid form in a
-    POST request it will generate the following response
-
-    Template:
-        schedule/create_event.html
-
-    Context Variables:
-
-    form:
-        an instance of EventForm
-
-    calendar:
-        a Calendar with id=calendar_id
-
-    if this function gets a GET request with ``year``, ``month``, ``day``,
-    ``hour``, ``minute``, and ``second`` it will auto fill the form, with
-    the date specifed in the GET being the start and 30 minutes from that
-    being the end.
-
-    If this form receives an event_id it will edit the event with that id, if it
-    recieves a calendar_id and it is creating a new event it will add that event
-    to the calendar with the id calendar_id
-
-    If it is given a valid form in a POST request it will redirect with one of
-    three options, in this order
-
-    # Try to find a 'next' GET variable
-    # If the key word argument redirect is set
-    # Lastly redirect to the event detail of the recently create event
-    """
-    date = coerce_date_dict(request.GET)
-    initial_data = None
-    if date:
-        try:
-            start = datetime.datetime(**date)
-            initial_data = {
-                "start": start,
-                "end": start + datetime.timedelta(minutes=30)
-            }
-        except TypeError:
-            raise Http404
-        except ValueError:
-            raise Http404
-
-    instance = None
-    if event_id is not None:
-        instance = get_object_or_404(Event, id=event_id)
-
-    calendar = get_object_or_404(Calendar, slug=calendar_slug)
-
-    form = form_class(data=request.POST or None, instance=instance,
-        hour24=True, initial=initial_data)
-
-    if form.is_valid():
-        event = form.save(commit=False)
-        if instance is None:
-            event.creator = request.user
-            event.calendar = calendar
-        event.save()
-        next = next or reverse('event', args=[event.id])
-        next = get_next_url(request, next)
-        return HttpResponseRedirect(next)
-
-    next = get_next_url(request, next)
-    return render_to_response(template_name, {
-        "form": form,
-        "calendar": calendar,
-        "next":next
-    }, context_instance=RequestContext(request))
-
-
-@check_event_permissions
-def delete_event(request, event_id, next=None, login_required=True):
-    """
-    After the event is deleted there are three options for redirect, tried in
-    this order:
-
-    # Try to find a 'next' GET variable
-    # If the key word argument redirect is set
-    # Lastly redirect to the event detail of the recently create event
-    """
-    event = get_object_or_404(Event, id=event_id)
-    next = next or reverse('day_calendar', args=[event.calendar.slug])
-    next = get_next_url(request, next)
-    return delete_object(request,
-                         model = Event,
-                         object_id = event_id,
-                         post_delete_redirect = next,
-                         template_name = "schedule/delete_event.html",
-                         extra_context = dict(next=next),
-                         login_required = login_required
-                        )
 
 def check_next_url(next):
     """
